@@ -1,7 +1,9 @@
 package loadtest
 
 import (
+	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg"
@@ -19,6 +21,14 @@ const (
 	// defaultTestTimeout is the default timeout for each test.
 	defaultTestTimeout = 10 * time.Minute
 )
+
+var testCasesFlag string
+
+func init() {
+	// Define your custom flag.
+	flag.StringVar(&testCasesFlag, "test-cases", "",
+		"Comma-separated list of test cases to run")
+}
 
 // User defines the config options for a user in the network.
 type User struct {
@@ -130,7 +140,10 @@ func DefaultConfig() Config {
 //  1. Start with a default config with sane settings
 //  2. Load configuration file overwriting defaults with any specified options
 func LoadConfig() (*Config, error) {
-	// First, load any additional configuration options from the file.
+	// Parse your custom flag before anything else.
+	flag.Parse()
+
+	// Load any additional configuration options from the file.
 	cfg := DefaultConfig()
 	fileParser := flags.NewParser(&cfg, flags.Default)
 	err := flags.NewIniParser(fileParser).ParseFile(defaultConfigPath)
@@ -142,8 +155,12 @@ func LoadConfig() (*Config, error) {
 			return nil, err
 		}
 	}
+	// Update the configuration based on the custom flag.
+	if testCasesFlag != "" {
+		cfg.TestCases = strings.Split(testCasesFlag, ",")
+	}
 
-	// Make sure everything we just loaded makes sense.
+	// Validate configuration.
 	cleanCfg, err := ValidateConfig(cfg)
 	if err != nil {
 		return nil, err
